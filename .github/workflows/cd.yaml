@@ -1,0 +1,13 @@
+name: CD
+
+on:
+  workflow_call:
+
+jobs:
+  deploy:
+    environment:
+      name: dev
+    runs-on: self-hosted
+    steps:
+      - name: Deploy
+        run: echo "Deploying..."
