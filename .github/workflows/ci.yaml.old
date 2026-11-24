@@ -1,0 +1,97 @@
+name: Task Manager CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+
+  unit-property-tests:
+    name: Backend unit & property tests
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit & property tests
+        run: npm run test
+
+  manifest-validation-test:
+    name: Validate k8s manifests
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run manifest validation tests
+        run: npm run test:manifests
+
+  build-docker-images:
+    runs-on: self-hosted
+    needs: [unit-property-tests, manifest-validation-test]
+    strategy:
+      matrix:
+        # Use include to add custom configurations.
+        include:
+          - name: frontend
+            context: ./frontend
+            dockerfile: ./frontend/Dockerfile
+            image: workshop-frontend
+
+          - name: backend
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+            image: workshop-backend 
+    
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Build and Push ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: false
+          tags: ${{ matrix.image }}:latest
+            # tags: |
+            # ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}:latest
+            # ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}:${{ github.run_number }}
+
+  deploy:
+    needs: build-docker-images
+    uses: ./.github/workflows/cd.yaml

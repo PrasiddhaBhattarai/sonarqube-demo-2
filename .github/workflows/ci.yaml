@@ -7,29 +7,6 @@ on:
 
 jobs:
 
-  unit-property-tests:
-    name: Backend unit & property tests
-    runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run unit & property tests
-        run: npm run test
-
   manifest-validation-test:
     name: Validate k8s manifests
     runs-on: self-hosted
@@ -53,9 +30,46 @@ jobs:
       - name: Run manifest validation tests
         run: npm run test:manifests
 
+  sonarqube-analysis:
+    name: Backend tests & SonarQube analysis
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history for blame and new-code detection
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run backend unit & property tests with coverage
+        working-directory: backend
+        run: npm run test -- --coverage.enabled --coverage.reporter=lcov
+
+      - name: SonarQube scan
+        uses: SonarSource/sonarqube-scan-action@v6   # check for the latest major version
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: http://localhost:9000
+
+      - name: SonarQube Quality Gate check
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: http://localhost:9000
+
   build-docker-images:
     runs-on: self-hosted
-    needs: [unit-property-tests, manifest-validation-test]
+    needs: [manifest-validation-test, sonarqube-analysis]
     strategy:
       matrix:
         # Use include to add custom configurations.
