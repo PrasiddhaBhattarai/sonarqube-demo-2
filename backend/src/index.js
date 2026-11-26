@@ -52,12 +52,17 @@ const app = createApp();
 
 // Start server (only when run directly, not when imported for testing)
 if (require.main === module) {
-  connectWithRetry().then(() => {
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
-      console.log(`Backend API listening on port ${PORT}`);
+  connectWithRetry()
+    .then(() => {
+      const PORT = process.env.PORT || 3000;
+      app.listen(PORT, () => {
+        console.log(`Backend API listening on port ${PORT}`);
+      });
+    })
+    .catch((error) => {
+      console.error('Failed to start backend server:', error);
+      process.exit(1);
     });
-  });
 }
 
 module.exports = app;

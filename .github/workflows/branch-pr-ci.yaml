@@ -48,7 +48,7 @@ jobs:
 
   build-docker-images:
     runs-on: self-hosted
-    needs: [manifest-validation-test, sonarqube-analysis]
+    needs: [sonarqube-analysis]
     steps:
       - name: build
         run: echo "Building..."

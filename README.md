@@ -1,4 +1,4 @@
-# Kubernetes Workshop
+# Kubernetes Workshop !
 
 A hands-on Kubernetes workshop project featuring a full-stack CRUD application (Node.js Express backend, static HTML/Nginx frontend, PostgreSQL database), K3s-compatible Kubernetes manifests, and an interactive HTML workshop page that guides participants through creating Kubernetes resources.
 
