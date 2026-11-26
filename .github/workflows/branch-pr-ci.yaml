@@ -1,0 +1,55 @@
+name: branch-ci
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+    types: [opened, reopened]
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  sonarqube-analysis:
+    name: Backend tests & SonarQube analysis
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history for blame and new-code detection
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run backend unit & property tests with coverage
+        working-directory: backend
+        run: npm run test -- --coverage.enabled --coverage.reporter=lcov
+
+      - name: SonarQube scan
+        uses: SonarSource/sonarqube-scan-action@v6   # check for the latest major version
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: http://localhost:9000
+
+      - name: SonarQube Quality Gate check
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: http://localhost:9000
+
+  build-docker-images:
+    runs-on: self-hosted
+    needs: [manifest-validation-test, sonarqube-analysis]
+    steps:
+      - name: build
+        run: echo "Building..."
+
