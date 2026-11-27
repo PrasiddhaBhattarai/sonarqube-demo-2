@@ -68,6 +68,9 @@ jobs:
           SONAR_HOST_URL: http://localhost:9000
 
   security:
+    permissions:
+      contents: read # for actions/checkout to fetch code
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@master
@@ -77,9 +80,15 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          command: monitor
-          args: --all-projects
+          # command: monitor
+          args: --all-projects --sarif-file-output=snyk.sarif  # Generate SARIF for GitHub
           # args: --file=backend/package.json --severity-threshold=high
+     # Upload SARIF to GitHub
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: snyk.sarif
+          category: snyk
   
   build-docker-images:
     runs-on: self-hosted
