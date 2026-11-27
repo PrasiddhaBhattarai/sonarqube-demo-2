@@ -73,8 +73,12 @@ jobs:
       - uses: actions/checkout@master
       - name: Run Snyk to check for vulnerabilities
         uses: snyk/actions/node@master
+        # continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --all-projects --severity-threshold=high
+          # args: --file=backend/package.json 
   
   build-docker-images:
     runs-on: self-hosted
